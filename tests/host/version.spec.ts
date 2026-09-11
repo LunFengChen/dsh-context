@@ -102,6 +102,17 @@ beforeAll(() => {
   // dependent; outside it the walk-up is provably clean.
   writeScratchHome('library-only', '@deepseek-ai/dsh-session-projection',
     JSON.stringify({ name: '@deepseek-ai/dsh-session-projection', version: '0.1.1-rc.2' }))
+  writeScratchHome('fork-cli-leftover', '@deepseek-ai/dsh',
+    JSON.stringify({ name: '@deepseek-ai/dsh', version: '0.1.0-rc.8' }))
+  writeScratchHome('fork-cli-leftover', '@x1a0f3n9/dsh',
+    JSON.stringify({ name: '@x1a0f3n9/dsh', version: '0.1.5-alpha.2' }))
+  writeScratchHome('fork-lib-leftover', '@deepseek-ai/dsh',
+    JSON.stringify({ name: '@deepseek-ai/dsh', version: '0.1.0-rc.8' }))
+  writeScratchHome('fork-lib-leftover', '@x1a0f3n9/dsh-session',
+    JSON.stringify({ name: '@x1a0f3n9/dsh-session', version: '0.1.5-alpha.2' }))
+  writeScratchHome('remapped-session', '@deepseek-ai/dsh-session',
+    JSON.stringify({ name: '@x1a0f3n9/dsh-session', version: '0.1.5-alpha.2', exports: { '.': './lib/index.js' } }),
+    { path: 'lib/index.js' })
   writeScratchHome('entry-only', '@deepseek-ai/dsh',
     JSON.stringify({ name: '@deepseek-ai/dsh', version: '0.1.1-rc.1', exports: { '.': './lib/index.js' } }),
     { path: 'lib/index.js' })
@@ -205,6 +216,18 @@ describe('detectHarnessVersion — home anchor', () => {
 
   test('falls through to the library packages when the CLI row is absent', () => {
     assert.equal(detectHarnessVersion(ctxWithHome(scratchResolver('library-only')), NO_RUNNING), '0.1.1-rc.2')
+  })
+
+  test('prefers a fork CLI over a leftover official CLI', () => {
+    assert.equal(detectHarnessVersion(ctxWithHome(scratchResolver('fork-cli-leftover')), NO_RUNNING), '0.1.5-alpha.2')
+  })
+
+  test('prefers a fork library over a leftover official CLI', () => {
+    assert.equal(detectHarnessVersion(ctxWithHome(scratchResolver('fork-lib-leftover')), NO_RUNNING), '0.1.5-alpha.2')
+  })
+
+  test('accepts a remapped fork package name while ascending from an official specifier', () => {
+    assert.equal(detectHarnessVersion(ctxWithHome(scratchResolver('remapped-session')), NO_RUNNING), '0.1.5-alpha.2')
   })
 
   test('ascends from the entry point when the manifest subpath is not exported', () => {

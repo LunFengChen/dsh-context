@@ -21,10 +21,11 @@
  *     the CLI and misname the running harness — that is why it answers only
  *     when the running anchor has nothing it can trust.
  *
- * The `@deepseek-ai/dsh` CLI package is probed ONLY through the home anchor:
- * the plugin never imports it, so a hit from the running anchor can only be an
- * ambient install above the plugin's tree (e.g. a global copy under
- * ~/node_modules) — not necessarily the RUNNING harness.
+ * CLI packages (`@deepseek-ai/dsh` and fork aliases `@x1a0f3n9/dsh` /
+ * `@xfcodeai/dsh`) are probed ONLY through the home anchor: the plugin never
+ * imports them, so a hit from the running anchor can only be an ambient
+ * install above the plugin's tree — not necessarily the RUNNING harness.
+ * Home prefers fork CLI and library rows over a leftover official CLI.
  *
  * Every step is guarded: any failure (absent service, unresolvable package,
  * non-file URL, unreadable/invalid manifest, non-string version) degrades to
@@ -39,22 +40,76 @@ import { fileURLToPath } from 'node:url'
 import type { Context } from '@deepseek-ai/cordis'
 
 /**
+ * Fork product scopes that publish the same lockstep version as official
+ * `@deepseek-ai/dsh-*` packages. A leftover official CLI in `$DSH_HOME` must
+ * not beat these names.
+ */
+const FORK_SCOPES = ['@x1a0f3n9/', '@xfcodeai/'] as const
+const OFFICIAL_SCOPE = '@deepseek-ai/'
+
+/**
  * Library packages whose manifest version IS the harness release version (the
- * dsh monorepo versions every package in lockstep). The home anchor probes
- * them after the CLI package; the running anchor probes the two first- and
- * second-ordered.
+ * dsh monorepo versions every package in lockstep).
  */
 const LIBRARY_PROBE_PACKAGES = ['@deepseek-ai/dsh-session-projection', '@deepseek-ai/dsh-session'] as const
 
-/**
- * Running-anchor probe order: the package the Host half genuinely imports at
- * runtime first (host/fold.ts imports it, so it MUST resolve whenever this
- * plugin runs), then its co-versioned sibling.
- */
-const RUNNING_PROBE_PACKAGES = ['@deepseek-ai/dsh-session', '@deepseek-ai/dsh-session-projection'] as const
+/** Official names plus each fork-scope alias, official last in each group. */
+function withForkAliases(officialNames: readonly string[]): string[] {
+  const names: string[] = []
+  for (const officialName of officialNames) {
+    const rest = officialName.slice(OFFICIAL_SCOPE.length)
+    for (const scope of FORK_SCOPES) names.push(scope + rest)
+    names.push(officialName)
+  }
+  return names
+}
 
-/** Home-anchor probe order: the user-facing CLI version first, then the libraries. */
-const HOME_PROBE_PACKAGES = ['@deepseek-ai/dsh', ...LIBRARY_PROBE_PACKAGES] as const
+/**
+ * Running-anchor probe order: fork libraries first, then the official names
+ * the Host half imports. Fork runtimes often have no leftover `@deepseek-ai/*`
+ * row under the plugin's own resolution.
+ */
+const RUNNING_PROBE_PACKAGES = withForkAliases([
+  '@deepseek-ai/dsh-session',
+  '@deepseek-ai/dsh-session-projection',
+])
+
+/**
+ * Home-anchor probe order: fork CLI and fork library names, then the official
+ * CLI, then official libraries. Official library names are last because this
+ * plugin depends on them; a home require() walk-up can otherwise answer with
+ * the plugin's own pinned `@deepseek-ai/dsh-session` instead of the harness.
+ */
+const HOME_PROBE_PACKAGES = [
+  '@x1a0f3n9/dsh',
+  '@xfcodeai/dsh',
+  '@x1a0f3n9/dsh-session-projection',
+  '@x1a0f3n9/dsh-session',
+  '@xfcodeai/dsh-session-projection',
+  '@xfcodeai/dsh-session',
+  '@deepseek-ai/dsh',
+  ...LIBRARY_PROBE_PACKAGES,
+]
+
+/** Package names that are the same product under official or fork scopes. */
+function equivalentPackageNames(packageName: string): readonly string[] {
+  let rest: string | undefined
+  if (packageName.startsWith(OFFICIAL_SCOPE)) rest = packageName.slice(OFFICIAL_SCOPE.length)
+  else {
+    for (const scope of FORK_SCOPES) {
+      if (packageName.startsWith(scope)) {
+        rest = packageName.slice(scope.length)
+        break
+      }
+    }
+  }
+  if (rest === undefined) return [packageName]
+  return [OFFICIAL_SCOPE + rest, ...FORK_SCOPES.map((scope) => scope + rest)]
+}
+
+function packageNamesMatch(recordName: unknown, expectedName: string): boolean {
+  return typeof recordName === 'string' && equivalentPackageNames(expectedName).includes(recordName)
+}
 
 /**
  * This package's root. A running-anchor witness under it belongs to the
@@ -91,7 +146,7 @@ function versionOfManifest(manifestPath: string, expectedName?: string): string 
     const parsed: unknown = JSON.parse(readFileSync(manifestPath, 'utf8'))
     if (parsed === null || typeof parsed !== 'object') return undefined
     const record = parsed as { name?: unknown; version?: unknown }
-    if (expectedName !== undefined && record.name !== expectedName) return undefined
+    if (expectedName !== undefined && !packageNamesMatch(record.name, expectedName)) return undefined
     return typeof record.version === 'string' && record.version !== '' ? record.version : undefined
   } catch {
     return undefined
