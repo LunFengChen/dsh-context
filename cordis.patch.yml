@@ -3,4 +3,4 @@
 # its ./client bundle as the browser half.
 - insert:
     - id: dsh-context
-      name: dsh-context
+      name: '@x1a0f3n9/dsh-context'

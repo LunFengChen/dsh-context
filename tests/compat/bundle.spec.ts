@@ -110,7 +110,7 @@ describe.skipIf(staging.artifactsMissing())('bundle smoke — the built lib/clie
 
   test('handoff: the bundle registers as dsh-context with the factory closure', () => {
     assert.ok(handoff !== null, 'bundle must register through __ModuleLoader__.load')
-    assert.equal(handoff.id, 'dsh-context', 'handoff id is the package name')
+    assert.equal(handoff.id, '@x1a0f3n9/dsh-context', 'handoff id is the package name')
     assert.equal(typeof handoff.factory, 'function')
     assert.equal(state.plugin?.name, 'dsh-context')
     assert.deepEqual(state.plugin?.inject, ['slots', 'locale'])
