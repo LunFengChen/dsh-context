@@ -47,6 +47,12 @@
     "social-preview": "node docs/social-preview/generate.ts"
   },
   "dsh": {
+    "plugin": {
+      "title": "Context dashboard",
+      "titleZh": "上下文面板",
+      "description": "Inspect context composition, compaction, and token use.",
+      "descriptionZh": "查看上下文组成、压缩和 token 用量。"
+    },
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
