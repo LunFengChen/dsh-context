@@ -49,9 +49,9 @@
   "dsh": {
     "plugin": {
       "title": "Context dashboard",
-      "titleZh": "上下文面板",
+      "titleZh": "\u4e0a\u4e0b\u6587\u9762\u677f",
       "description": "Inspect context composition, compaction, and token use.",
-      "descriptionZh": "查看上下文组成、压缩和 token 用量。"
+      "descriptionZh": "\u67e5\u770b\u4e0a\u4e0b\u6587\u7ec4\u6210\u3001\u538b\u7f29\u548c token \u7528\u91cf\u3002"
     },
     "bundle": {
       "patch": "./cordis.patch.yml"
@@ -132,5 +132,9 @@
     "typescript": "^7.0.2",
     "vitest": "^4.1.11",
     "zod": "^4.4.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }
